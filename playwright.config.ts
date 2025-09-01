@@ -30,7 +30,7 @@ export default defineConfig({
     browserName: "chromium",
     testIdAttribute: process.env.DATA_TEST_ID,
     video: "retain-on-failure",
-    baseURL: process.env.BASE_URL,
+    baseURL: `${process.env.BASE_URL}`,
     viewport: {
       width: 1920,
       height: 1080,
