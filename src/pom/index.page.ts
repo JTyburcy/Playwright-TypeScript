@@ -1,5 +1,4 @@
 import { Locator, Page } from "playwright";
-import { start } from "repl";
 
 export enum gameStatus {
   PLAYER_X = "Next player: X",
@@ -9,34 +8,33 @@ export enum gameStatus {
   DRAW = "It's a draw!",
 }
 
+export enum possibleMoves {
+  RANDOM = "random",
+  DRAW = "DRAW",
+  VERTICAL_LEFT = "vertical left",
+  VERTICAL_CENTER = "vertical center",
+  VERTICAL_RIGHT = "vertical right",
+  HORIZONTAL_TOP = "horizontal top",
+  HORIZONTAL_CENTER = "horizontal center",
+  HORIZONTAL_BOTTOM = "horizontal bottom",
+  CROSS_LEFT = "cross left",
+  CROSS_RIGHT = "cross right",
+}
+
 export class IndexPage {
   public readonly TEXT_GAME_STATUS: Locator;
   public readonly TEXT_GAME_HISTORY: Locator;
   public readonly LIST_HISTORY: Locator[];
   public readonly BUTTON_RESET: Locator;
-  public readonly GAME_SQUARE_1: Locator;
-  public readonly GAME_SQUARE_2: Locator;
-  public readonly GAME_SQUARE_3: Locator;
-  public readonly GAME_SQUARE_4: Locator;
-  public readonly GAME_SQUARE_5: Locator;
-  public readonly GAME_SQUARE_6: Locator;
-  public readonly GAME_SQUARE_7: Locator;
-  public readonly GAME_SQUARE_8: Locator;
-  public readonly GAME_SQUARE_9: Locator;
+  public readonly GAME_SQUARES: Locator[];
 
   constructor(public page: Page) {
     this.TEXT_GAME_STATUS = page.getByTestId("game-status");
     this.TEXT_GAME_HISTORY = page.getByTestId("game-history");
     this.BUTTON_RESET = page.getByTestId("reset-button");
-    this.GAME_SQUARE_1 = page.getByTestId("square-0");
-    this.GAME_SQUARE_2 = page.getByTestId("square-1");
-    this.GAME_SQUARE_3 = page.getByTestId("square-2");
-    this.GAME_SQUARE_4 = page.getByTestId("square-3");
-    this.GAME_SQUARE_5 = page.getByTestId("square-4");
-    this.GAME_SQUARE_6 = page.getByTestId("square-5");
-    this.GAME_SQUARE_7 = page.getByTestId("square-6");
-    this.GAME_SQUARE_8 = page.getByTestId("square-7");
-    this.GAME_SQUARE_9 = page.getByTestId("square-8");
+    this.GAME_SQUARES = Array.from({ length: 9 }, (_, i) =>
+      page.getByTestId(`square-${i}`),
+    );
   }
 
   public async getGameStatus(): Promise<string> {
@@ -47,15 +45,65 @@ export class IndexPage {
     await this.BUTTON_RESET.click();
   }
 
+  private validateCellIndex(cellIndex: number): void {
+    if (
+      !Number.isInteger(cellIndex) ||
+      cellIndex < 1 ||
+      cellIndex > this.GAME_SQUARES.length
+    ) {
+      throw new Error(
+        `Invalid cellIndex: ${cellIndex}. Must be an integer between 1 and ${this.GAME_SQUARES.length}.`,
+      );
+    }
+  }
+
   public async markCell(cellIndex: number): Promise<void> {
-    const cell = this[`GAME_SQUARE_${cellIndex}`];
+    this.validateCellIndex(cellIndex);
+    const cell = this.GAME_SQUARES[cellIndex - 1];
     await cell.click();
   }
 
-  public async simulateGame(): Promise<void> {}
+  public async simulateGame(
+    gameMoves: possibleMoves,
+    expectedEndStatus?: gameStatus,
+    reverse?: boolean,
+  ): Promise<void> {
+    const movesMap: Record<possibleMoves, number[]> = {
+      [possibleMoves.DRAW]: [1, 2, 3, 6, 9, 5, 8, 7, 4],
+      [possibleMoves.VERTICAL_LEFT]: [1, 3, 4, 5, 7],
+      [possibleMoves.VERTICAL_CENTER]: [2, 3, 5, 6, 8],
+      [possibleMoves.VERTICAL_RIGHT]: [3, 2, 6, 5, 9],
+      [possibleMoves.HORIZONTAL_TOP]: [1, 7, 2, 5, 3],
+      [possibleMoves.HORIZONTAL_CENTER]: [4, 7, 5, 3, 6],
+      [possibleMoves.HORIZONTAL_BOTTOM]: [7, 4, 8, 5, 9],
+      [possibleMoves.CROSS_LEFT]: [1, 3, 5, 6, 9],
+      [possibleMoves.CROSS_RIGHT]: [3, 2, 5, 6, 7],
+      [possibleMoves.RANDOM]: [Math.floor(Math.random() * 9)],
+    };
 
+    let movesSequence = movesMap[gameMoves];
+    if (reverse) movesSequence.reverse();
+
+    if (expectedEndStatus === gameStatus.WINNER_O) {
+      // For WINNER_O, prepend a move to ensure 'Player O' wins; certain patterns require starting with cell 2, others with cell 4.
+      const prependMove = [
+        possibleMoves.VERTICAL_LEFT,
+        possibleMoves.HORIZONTAL_CENTER,
+        possibleMoves.HORIZONTAL_BOTTOM,
+        possibleMoves.CROSS_LEFT,
+      ].includes(gameMoves)
+        ? 2
+        : 4;
+      movesSequence = [prependMove, ...movesSequence];
+    }
+
+    for (const move of movesSequence) {
+      await this.markCell(move);
+    }
+  }
   public async getCellValue(cellIndex: number): Promise<string> {
-    const cell = this[`GAME_SQUARE_${cellIndex}`];
+    this.validateCellIndex(cellIndex);
+    const cell = this.GAME_SQUARES[cellIndex - 1];
     return await cell.innerText();
   }
 }

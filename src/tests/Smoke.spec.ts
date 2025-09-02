@@ -1,7 +1,25 @@
 import { expect, Page } from "playwright/test";
 import { test } from "../utils/fixtures";
 import { goToPage } from "../utils/commonActions";
-import { gameStatus } from "../pom/index.page";
+import { gameStatus, IndexPage, possibleMoves } from "../pom/index.page";
+
+async function movmentSimulation(
+  index: IndexPage,
+  possibleMoves: possibleMoves,
+  expectedEndStatus: gameStatus,
+  revers?: boolean,
+): Promise<void> {
+  const expectMessage: string = `The status message should display ${expectedEndStatus} victory message.`;
+  const testStepMessage: string = `Simulate ${possibleMoves} ${revers ? "reverse " : ""}sequence resulting in ${expectedEndStatus.replace("Winner: ", "player ")} victory.`;
+
+  await test.step(testStepMessage, async () => {
+    await index.gameReset();
+    await index.simulateGame(possibleMoves, expectedEndStatus, revers);
+    expect
+      .soft(await index.getGameStatus(), expectMessage)
+      .toContain(expectedEndStatus);
+  });
+}
 
 test.describe(`[SMOKE] Game functionality @Smoke @Game`, () => {
   test(`[TICKET_ID] Game should accurately display current player's turn, indicating either X or O @Game`, async ({
@@ -30,7 +48,133 @@ test.describe(`[SMOKE] Game functionality @Smoke @Game`, () => {
     });
   });
 
-  test(`[TICKET_ID] Game should correctly identify and announce the winner when a player achieves three marks in a row (horizontally, vertically, or diagonally) @Game`, () => {});
+  test(`[TICKET_ID] Game should correctly identify and announce the winner when a player X achieves three marks in a row (horizontally, vertically, or diagonally) @Game`, async ({
+    page,
+    indexPage,
+  }) => {
+    await goToPage(page);
+    const winner: gameStatus = gameStatus.WINNER_X;
+
+    await movmentSimulation(indexPage, possibleMoves.CROSS_LEFT, winner);
+    await movmentSimulation(indexPage, possibleMoves.CROSS_RIGHT, winner);
+    await movmentSimulation(indexPage, possibleMoves.VERTICAL_LEFT, winner);
+    await movmentSimulation(indexPage, possibleMoves.VERTICAL_CENTER, winner);
+    await movmentSimulation(indexPage, possibleMoves.VERTICAL_RIGHT, winner);
+    await movmentSimulation(indexPage, possibleMoves.HORIZONTAL_TOP, winner);
+    await movmentSimulation(indexPage, possibleMoves.HORIZONTAL_CENTER, winner);
+    await movmentSimulation(indexPage, possibleMoves.HORIZONTAL_BOTTOM, winner);
+  });
+
+  test(`[TICKET_ID] Game should correctly identify and announce the winner when a player O achieves three marks in a row (horizontally, vertically, or diagonally) @Game`, async ({
+    page,
+    indexPage,
+  }) => {
+    await goToPage(page);
+    const winner: gameStatus = gameStatus.WINNER_O;
+
+    await movmentSimulation(indexPage, possibleMoves.CROSS_LEFT, winner);
+    await movmentSimulation(indexPage, possibleMoves.CROSS_RIGHT, winner);
+    await movmentSimulation(indexPage, possibleMoves.VERTICAL_LEFT, winner);
+    await movmentSimulation(indexPage, possibleMoves.VERTICAL_CENTER, winner);
+    await movmentSimulation(indexPage, possibleMoves.VERTICAL_RIGHT, winner);
+    await movmentSimulation(indexPage, possibleMoves.HORIZONTAL_TOP, winner);
+    await movmentSimulation(indexPage, possibleMoves.HORIZONTAL_CENTER, winner);
+    await movmentSimulation(indexPage, possibleMoves.HORIZONTAL_BOTTOM, winner);
+  });
+
+  test(`[TICKET_ID] Game should correctly identify and announce the winner when a player X achieves three marks in a row revers (horizontally, vertically, or diagonally) @Game`, async ({
+    page,
+    indexPage,
+  }) => {
+    await goToPage(page);
+    const winner: gameStatus = gameStatus.WINNER_X;
+
+    await movmentSimulation(indexPage, possibleMoves.CROSS_LEFT, winner, true);
+    await movmentSimulation(indexPage, possibleMoves.CROSS_RIGHT, winner, true);
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.VERTICAL_LEFT,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.VERTICAL_CENTER,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.VERTICAL_RIGHT,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.HORIZONTAL_TOP,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.HORIZONTAL_CENTER,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.HORIZONTAL_BOTTOM,
+      winner,
+      true,
+    );
+  });
+
+  test(`[TICKET_ID] Game should correctly identify and announce the winner when a player O achieves three marks in a row revers (horizontally, vertically, or diagonally) @Game`, async ({
+    page,
+    indexPage,
+  }) => {
+    await goToPage(page);
+    const winner: gameStatus = gameStatus.WINNER_O;
+
+    await movmentSimulation(indexPage, possibleMoves.CROSS_LEFT, winner, true);
+    await movmentSimulation(indexPage, possibleMoves.CROSS_RIGHT, winner, true);
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.VERTICAL_LEFT,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.VERTICAL_CENTER,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.VERTICAL_RIGHT,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.HORIZONTAL_TOP,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.HORIZONTAL_CENTER,
+      winner,
+      true,
+    );
+    await movmentSimulation(
+      indexPage,
+      possibleMoves.HORIZONTAL_BOTTOM,
+      winner,
+      true,
+    );
+  });
 
   /* test(`[TICKET_ID] Game should allow players to restart the game after it ends @Game`, () => {});
     test(`[TICKET_ID] Game should display a draw message when the game ends in a draw @Game`, () => {});
