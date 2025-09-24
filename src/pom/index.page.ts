@@ -32,9 +32,7 @@ export class IndexPage {
     this.TEXT_GAME_STATUS = page.getByTestId("game-status");
     this.TEXT_GAME_HISTORY = page.getByTestId("game-history");
     this.BUTTON_RESET = page.getByTestId("reset-button");
-    this.GAME_SQUARES = Array.from({ length: 9 }, (_, i) =>
-      page.getByTestId(`square-${i}`),
-    );
+    this.GAME_SQUARES = Array.from({ length: 9 }, (_, i) => page.getByTestId(`square-${i}`));
   }
 
   public async getGameStatus(): Promise<string> {
@@ -46,14 +44,8 @@ export class IndexPage {
   }
 
   private validateCellIndex(cellIndex: number): void {
-    if (
-      !Number.isInteger(cellIndex) ||
-      cellIndex < 1 ||
-      cellIndex > this.GAME_SQUARES.length
-    ) {
-      throw new Error(
-        `Invalid cellIndex: ${cellIndex}. Must be an integer between 1 and ${this.GAME_SQUARES.length}.`,
-      );
+    if (!Number.isInteger(cellIndex) || cellIndex < 1 || cellIndex > this.GAME_SQUARES.length) {
+      throw new Error(`Invalid cellIndex: ${cellIndex}. Must be an integer between 1 and ${this.GAME_SQUARES.length}.`);
     }
   }
 
@@ -105,5 +97,11 @@ export class IndexPage {
     this.validateCellIndex(cellIndex);
     const cell = this.GAME_SQUARES[cellIndex - 1];
     return await cell.innerText();
+  }
+
+  public async getMoveHistoryCounter(): Promise<number> {
+    const moveCount: number = await this.page.locator('ul[data-testid="history-moves"] li').count();
+    if (!moveCount || moveCount === 0) return 0;
+    else return moveCount;
   }
 }
