@@ -8,14 +8,18 @@ async function movmentSimulation(
   possibleMoves: possibleMoves,
   expectedEndStatus: gameStatus,
   revers?: boolean,
+  maxMoves?: number,
 ): Promise<void> {
   const expectMessage = `The status message should display ${expectedEndStatus} ${expectedEndStatus === gameStatus.DRAW ? "message." : "victory message."}`;
   let testStepMessage: string = `Simulate ${possibleMoves} ${revers ? "reverse " : ""}sequence resulting in ${expectedEndStatus.replace("Winner: ", "player ")} ${expectedEndStatus === gameStatus.DRAW ? "." : "victory."}`;
+  let maxGameMoves: number = 0;
+  if (maxMoves !== undefined) maxGameMoves = maxMoves;
 
+  await console.log(`Max Game Moves: ${maxMoves}`);
   await test.step(testStepMessage, async () => {
     await index.gameReset();
-    await index.simulateGame(possibleMoves, expectedEndStatus, revers);
-    expect.soft(await index.getGameStatus(), expectMessage).toContain(expectedEndStatus);
+    await index.simulateGame(possibleMoves, maxGameMoves, expectedEndStatus, revers);
+    if (maxGameMoves === 0) expect.soft(await index.getGameStatus(), expectMessage).toContain(expectedEndStatus);
   });
 }
 
@@ -139,6 +143,64 @@ test.describe(`[SMOKE] Game functionality @Smoke @Game`, () => {
     });
   });
 
+  test(`[TICKET_ID] Game should allow players to restart the game at any stage of play @Game`, async ({
+    page,
+    indexPage,
+  }) => {
+    await goToPage(page);
+    const winner: gameStatus = gameStatus.DRAW;
+    let movesBeforeReset: number;
+    let movesAfterReset: number;
+
+    for (let movesToReset = 9; movesToReset >= 1; movesToReset--) {
+      await movmentSimulation(indexPage, possibleMoves.DRAW, winner, false, movesToReset);
+      movesBeforeReset = await indexPage.getMoveHistoryCounter();
+      await indexPage.gameReset();
+      movesAfterReset = await indexPage.getMoveHistoryCounter();
+
+      await test.step(`Verify that the game status displays the correct message for the first player (X) after reset.`, async () => {
+        expect
+          .soft(
+            await indexPage.getGameStatus(),
+            `The status message should display "${gameStatus.PLAYER_X}" after reset.`,
+          )
+          .toContain(gameStatus.PLAYER_X);
+      });
+
+      await test.step(`Verify that History was cleared after clicking reset button`, async () => {
+        expect.soft(movesAfterReset, `The game history should be cleared after clicking the reset button.`).toBe(1);
+        expect
+          .soft(movesBeforeReset, `The move history after reset should be less than before reset.`)
+          .toBeGreaterThan(movesAfterReset);
+      });
+    }
+  });
+
+  test(`[TICKET_ID] game should allow players to return to a previous move in the game’s history at any stage of play @Game`, async ({
+    page,
+    indexPage,
+  }) => {
+    await goToPage(page);
+    await movmentSimulation(indexPage, possibleMoves.DRAW, gameStatus.PLAYER_O);
+    const historyOfMoves: number = await indexPage.getMoveHistoryCounter();
+    let numberOfEmptyCellsBefore: number = await indexPage.getNumberOfCells("");
+    let numberOfEmptyCellsAfter: number;
+
+    for (let moveIndex = historyOfMoves - 2; moveIndex >= 0; moveIndex--) {
+      await indexPage.getHistoryMove(moveIndex);
+      numberOfEmptyCellsAfter = await indexPage.getNumberOfCells("");
+      await test.step(`Verify that after returning to move ${moveIndex}, the number of empty cells increases.`, async () => {
+        expect
+          .soft(
+            numberOfEmptyCellsAfter,
+            `The number of empty cells should increase after returning to move ${moveIndex}.`,
+          )
+          .toBeGreaterThan(numberOfEmptyCellsBefore);
+      });
+      numberOfEmptyCellsBefore = numberOfEmptyCellsAfter;
+    }
+  });
+
   test(`[TICKET_ID] Game should display a draw message when the game ends in a draw @Game`, async ({
     page,
     indexPage,
@@ -146,18 +208,4 @@ test.describe(`[SMOKE] Game functionality @Smoke @Game`, () => {
     await goToPage(page);
     await movmentSimulation(indexPage, possibleMoves.DRAW, gameStatus.DRAW);
   });
-
-  /* 
-    test(`[TICKET_ID] Game should display a draw message when the game ends in a draw @Game`, () => {});
-
-
-    test(`[TICKET_ID] Game should reset the board after a player wins or the game ends in a draw @Game`, () => {});
-    test(`[TICKET_ID] Game should display an error message when a player tries to make a move in an already occupied cell @Game`, () => {});
-    test(`[TICKET_ID] Game should allow players to make a move only if it's their turn @Game`, () => {});
-    test(`[TICKET_ID] Game should not allow players to make a move after the game has ended @Game`, () => {});
-*/
 });
-
-/*
-test.describe(`[SMOKE] Game functionality @Smoke @Application`, () => {});
-*/

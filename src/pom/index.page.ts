@@ -24,7 +24,6 @@ export enum possibleMoves {
 export class IndexPage {
   public readonly TEXT_GAME_STATUS: Locator;
   public readonly TEXT_GAME_HISTORY: Locator;
-  public readonly LIST_HISTORY: Locator[];
   public readonly BUTTON_RESET: Locator;
   public readonly GAME_SQUARES: Locator[];
 
@@ -57,6 +56,7 @@ export class IndexPage {
 
   public async simulateGame(
     gameMoves: possibleMoves,
+    maxGameMoves: number,
     expectedEndStatus?: gameStatus,
     reverse?: boolean,
   ): Promise<void> {
@@ -74,8 +74,11 @@ export class IndexPage {
     };
 
     let movesSequence = movesMap[gameMoves];
+    if (maxGameMoves == 0 || maxGameMoves > movesSequence.length) maxGameMoves = movesSequence.length;
+
     if (reverse) movesSequence.reverse();
 
+    movesSequence = movesSequence.slice(0, maxGameMoves);
     if (expectedEndStatus === gameStatus.WINNER_O) {
       // For WINNER_O, prepend a move to ensure 'Player O' wins; certain patterns require starting with cell 2, others with cell 4.
       const prependMove = [
@@ -93,10 +96,39 @@ export class IndexPage {
       await this.markCell(move);
     }
   }
+
+  public async getNumberOfCells(value: string): Promise<number> {
+    let count: number = 0;
+
+    for (let i = 0; i < this.GAME_SQUARES.length; i++) {
+      const cellText = await this.GAME_SQUARES[i].innerText();
+      if (cellText.trim() === value) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  public async getAllEmptyCells(): Promise<number> {
+    let emptyCells: number = 0;
+
+    for (let i = 0; i < this.GAME_SQUARES.length; i++) {
+      const cellText = await this.GAME_SQUARES[i].innerText();
+      if (cellText.trim() === "") {
+        emptyCells++;
+      }
+    }
+    return emptyCells;
+  }
   public async getCellValue(cellIndex: number): Promise<string> {
     this.validateCellIndex(cellIndex);
     const cell = this.GAME_SQUARES[cellIndex - 1];
     return await cell.innerText();
+  }
+
+  public async getHistoryMove(moveIndex: number): Promise<void> {
+    const moveLocator = this.page.locator(`ul[data-testid="history-moves"] li`).nth(moveIndex);
+    await moveLocator.click();
   }
 
   public async getMoveHistoryCounter(): Promise<number> {
